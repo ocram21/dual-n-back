@@ -97,7 +97,8 @@
     .cell { border-radius: 9px; background: var(--cell); }
     .cell.active { background: var(--stimulus); }
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
+    .answer.pointer-activated:focus { outline: none; }
     .answer:enabled:hover { border-color: var(--accent); background: #f7faf8; }
     .answer small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
     .answer.flash { border-color: var(--accent); background: #dcebe2; color: var(--accent-dark); }
@@ -282,6 +283,7 @@
     const counter = document.getElementById("counter");
     const audioButton = document.getElementById("audioButton");
     const positionButton = document.getElementById("positionButton");
+    const pointerAnswersHandled = new WeakSet();
 
     function showView(view) {
       startView.classList.toggle("hidden", view !== startView);
@@ -373,14 +375,30 @@
     function clearAnswerFeedback() {
       audioButton.classList.remove("flash");
       positionButton.classList.remove("flash");
+      audioButton.classList.remove("pointer-activated");
+      positionButton.classList.remove("pointer-activated");
+      audioButton.blur();
+      positionButton.blur();
     }
 
     function handleAnswerPointer(kind, event) {
-      // Pointerdown registers each finger independently, so both buttons can
-      // be pressed together on touch screens without waiting for click events.
-      if (event.pointerType !== "mouse") event.preventDefault();
+      // Register on pointerdown so two separate fingers are handled independently.
+      event.currentTarget.classList.add("pointer-activated");
+      pointerAnswersHandled.add(event.currentTarget);
       registerAnswer(kind);
-      event.currentTarget.blur();
+    }
+
+    function handleAnswerClick(kind, event) {
+      const button = event.currentTarget;
+      // Pointer input was already recorded immediately on pointerdown.
+      if (event.detail === 0 || !pointerAnswersHandled.has(button)) registerAnswer(kind);
+      pointerAnswersHandled.delete(button);
+      if (event.detail > 0) {
+        requestAnimationFrame(() => {
+          button.blur();
+          button.classList.remove("pointer-activated");
+        });
+      }
     }
 
     function wait(ms) {
@@ -551,8 +569,17 @@
     positionButton.addEventListener("pointerdown", event => handleAnswerPointer("position", event));
     // Keep keyboard and assistive-technology activation working. A pointer
     // click is already recorded on pointerdown and is ignored as a duplicate.
-    audioButton.addEventListener("click", () => registerAnswer("audio"));
-    positionButton.addEventListener("click", () => registerAnswer("position"));
+    audioButton.addEventListener("click", event => handleAnswerClick("audio", event));
+    positionButton.addEventListener("click", event => handleAnswerClick("position", event));
+    for (const button of [audioButton, positionButton]) {
+      button.addEventListener("pointercancel", () => {
+        pointerAnswersHandled.delete(button);
+        requestAnimationFrame(() => {
+          button.blur();
+          button.classList.remove("pointer-activated");
+        });
+      });
+    }
     window.addEventListener("keydown", event => {
       if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key.toLowerCase() === "a") { event.preventDefault(); registerAnswer("audio"); }
