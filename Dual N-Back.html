@@ -97,7 +97,7 @@
     .cell { border-radius: 9px; background: var(--cell); }
     .cell.active { background: var(--stimulus); }
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+    .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     .answer:enabled:hover { border-color: var(--accent); background: #f7faf8; }
     .answer small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
     .answer.flash { border-color: var(--accent); background: #dcebe2; color: var(--accent-dark); }
@@ -185,7 +185,7 @@
         user-select: none;
         -webkit-user-select: none;
       }
-      .answer:active { transform: translateY(1px); background: #edf4f0; border-color: var(--accent); }
+      .answer:active { transform: translateY(1px); }
     }
 
     @media (max-width: 380px) {
@@ -370,6 +370,19 @@
       window.setTimeout(() => button.classList.remove("flash"), 220);
     }
 
+    function clearAnswerFeedback() {
+      audioButton.classList.remove("flash");
+      positionButton.classList.remove("flash");
+    }
+
+    function handleAnswerPointer(kind, event) {
+      // Pointerdown registers each finger independently, so both buttons can
+      // be pressed together on touch screens without waiting for click events.
+      if (event.pointerType !== "mouse") event.preventDefault();
+      registerAnswer(kind);
+      event.currentTarget.blur();
+    }
+
     function wait(ms) {
       return new Promise(resolve => window.setTimeout(resolve, ms));
     }
@@ -386,6 +399,7 @@
 
       for (let index = 0; index < round.sequence.length; index += 1) {
         if (token !== state.roundToken) return;
+        clearAnswerFeedback();
         round.index = index;
         const trial = round.sequence[index];
         counter.textContent = `Durchgang ${Math.max(0, index - level + 1)} / ${CONFIG.scoredTrials}`;
@@ -533,6 +547,10 @@
       await unlockAudioForMobile();
       playRound(state.level);
     });
+    audioButton.addEventListener("pointerdown", event => handleAnswerPointer("audio", event));
+    positionButton.addEventListener("pointerdown", event => handleAnswerPointer("position", event));
+    // Keep keyboard and assistive-technology activation working. A pointer
+    // click is already recorded on pointerdown and is ignored as a duplicate.
     audioButton.addEventListener("click", () => registerAnswer("audio"));
     positionButton.addEventListener("click", () => registerAnswer("position"));
     window.addEventListener("keydown", event => {
