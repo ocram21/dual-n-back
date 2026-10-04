@@ -24,10 +24,33 @@
       --line: #dce1dd;
       --accent: #2e6653;
       --accent-dark: #244f41;
+      --selected-bg: #edf4f0;
+      --selected-ink: #244f41;
+      --hover-surface: #f7faf8;
+      --feedback-bg: #e8ebe9;
+      --feedback-line: #98a29c;
       --stimulus: #92c8ae;
       --cell: #eef1ee;
       --danger: #963f35;
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #000;
+      --surface: #111411;
+      --ink: #edf1ee;
+      --muted: #a1aaa5;
+      --line: #343b36;
+      --accent: #367d5c;
+      --accent-dark: #295c44;
+      --selected-bg: #20342a;
+      --selected-ink: #d4efdd;
+      --hover-surface: #1a211d;
+      --feedback-bg: #303833;
+      --feedback-line: #77847b;
+      --stimulus: #8ac8a4;
+      --cell: #252b27;
+      --danger: #ff9388;
     }
 
     * { box-sizing: border-box; }
@@ -78,7 +101,7 @@
       display: block; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px;
       text-align: center; font-weight: 600;
     }
-    .level-choice input:checked + span { border-color: var(--accent); background: #edf4f0; color: var(--accent-dark); }
+    .level-choice input:checked + span { border-color: var(--accent); background: var(--selected-bg); color: var(--selected-ink); }
     .level-choice input:focus-visible + span { outline: 3px solid #a8c9ba; outline-offset: 2px; }
     .primary, .answer, .secondary {
       min-height: 52px; border: 0; border-radius: 8px; font-weight: 650; cursor: pointer;
@@ -98,10 +121,10 @@
     .cell { border-radius: 9px; background: var(--cell); }
     .cell.active { background: var(--stimulus); }
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
-    .answer:enabled:hover { border-color: var(--accent); background: #f7faf8; }
+    .answer { padding: 12px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
+    .answer:enabled:hover { border-color: var(--accent); background: var(--hover-surface); }
     .answer small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
-    .answer.flash { border-color: #98a29c; background: #e8ebe9; color: var(--ink); }
+    .answer.flash { border-color: var(--feedback-line); background: var(--feedback-bg); color: var(--ink); }
     .result-lead { margin-bottom: 24px; color: var(--muted); }
     .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
     .score-card { padding: 16px; border: 1px solid var(--line); border-radius: 9px; }
@@ -113,8 +136,9 @@
     .outcome.fail { color: var(--danger); }
     .next-step { margin: -12px 0 24px; color: var(--muted); line-height: 1.5; }
     .actions { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .secondary { padding: 12px 14px; border: 1px solid var(--line); background: white; color: var(--ink); }
+    .secondary { padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
     .secondary:hover { border-color: var(--accent); }
+    .theme-toggle { width: 100%; margin-bottom: 12px; }
     .history { margin-top: 30px; }
     .history h2 { margin-bottom: 11px; font-size: 17px; }
     .history ol { margin: 0; padding-left: 22px; color: var(--muted); line-height: 1.8; }
@@ -198,8 +222,8 @@
     @media (hover: none) and (pointer: coarse) {
       .primary:hover, .secondary:hover { background: inherit; }
       .primary:hover { background: var(--accent); }
-      .answer:enabled:hover { border-color: var(--line); background: #fff; }
-      .answer:enabled.flash { border-color: #98a29c; background: #e8ebe9; color: var(--ink); }
+      .answer:enabled:hover { border-color: var(--line); background: var(--surface); }
+      .answer:enabled.flash { border-color: var(--feedback-line); background: var(--feedback-bg); color: var(--ink); }
     }
   </style>
 </head>
@@ -215,6 +239,7 @@
         <label><input type="radio" name="startLevel" value="1" checked><span>1-Back</span></label>
         <label><input type="radio" name="startLevel" value="2"><span>2-Back</span></label>
       </div>
+      <button class="secondary theme-toggle" id="themeToggle" type="button" aria-pressed="false">Dunkelmodus einschalten</button>
       <button class="primary" id="startButton" type="button">Training starten</button>
     </section>
 
@@ -281,12 +306,34 @@
     const startView = document.getElementById("startView");
     const gameView = document.getElementById("gameView");
     const resultView = document.getElementById("resultView");
+    const themeToggle = document.getElementById("themeToggle");
     const gridCells = Array.from(document.querySelectorAll(".cell"));
     const counter = document.getElementById("counter");
     const audioButton = document.getElementById("audioButton");
     const positionButton = document.getElementById("positionButton");
     const pointerAnswersHandled = new WeakSet();
     const answerFeedbackTimers = new WeakMap();
+
+    function setDarkMode(enabled) {
+      document.documentElement.dataset.theme = enabled ? "dark" : "light";
+      themeToggle.setAttribute("aria-pressed", String(enabled));
+      themeToggle.textContent = enabled ? "Hellmodus einschalten" : "Dunkelmodus einschalten";
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", enabled ? "#000000" : "#f4f5f3");
+      try {
+        localStorage.setItem("dualNBackTheme", enabled ? "dark" : "light");
+      } catch (_) {
+        // Das Design funktioniert auch, wenn der Browser Speicherung blockiert.
+      }
+    }
+
+    let darkModeEnabled = false;
+    try {
+      darkModeEnabled = localStorage.getItem("dualNBackTheme") === "dark";
+    } catch (_) {
+      // Verwende den hellen Modus, falls lokaler Speicher nicht verfügbar ist.
+    }
+    setDarkMode(darkModeEnabled);
+    themeToggle.addEventListener("click", () => setDarkMode(document.documentElement.dataset.theme !== "dark"));
 
     function showView(view) {
       startView.classList.toggle("hidden", view !== startView);
