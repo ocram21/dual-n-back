@@ -1,0 +1,26 @@
+{
+  "name": "Dual N-Back Training",
+  "short_name": "Dual N-Back",
+  "description": "Dual N-Back Training mit Positions- und Audio-Reizen.",
+  "lang": "de-DE",
+  "start_url": "./Dual%20N-Back.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f5f3",
+  "theme_color": "#f4f5f3",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
