@@ -123,17 +123,16 @@
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .answer { padding: 12px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
     .answer:enabled:hover { border-color: var(--accent); background: var(--hover-surface); }
-    .answer small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
     .answer.flash { border-color: var(--feedback-line); background: var(--feedback-bg); color: var(--ink); }
     .result-lead { margin-bottom: 24px; color: var(--muted); }
-    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+    .score-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
     .score-card { padding: 16px; border: 1px solid var(--line); border-radius: 9px; }
     .score-card h3 { margin: 0 0 11px; font-size: 16px; }
     .score-card dl { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; margin: 0; color: var(--muted); font-size: 14px; }
     .score-card dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
     .total-errors { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-weight: 650; }
     .outcome { margin: 18px 0 22px; font-size: 18px; font-weight: 700; }
-    .outcome.fail { color: var(--danger); }
+    .outcome.fail { color: var(--accent); }
     .next-step { margin: -12px 0 24px; color: var(--muted); line-height: 1.5; }
     .actions { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .secondary { padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
@@ -159,7 +158,8 @@
       .panel { padding: clamp(18px, 5vw, 28px); border-radius: 12px; }
       .level-choice span { min-height: 50px; display: grid; place-items: center; }
       .primary, .secondary { min-height: 56px; }
-      .score-grid, .actions { grid-template-columns: 1fr; }
+      .score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .actions { grid-template-columns: 1fr; }
 
       body.playing {
         padding:
@@ -217,6 +217,9 @@
       .panel { padding: 16px; }
       .answer { font-size: 14px; }
       .grid { width: min(94vw, calc(100dvh - 195px)); }
+      .score-card { padding: 10px; }
+      .score-card h3 { font-size: 14px; }
+      .score-card dl { gap: 6px 5px; font-size: 12px; }
     }
 
     @media (hover: none) and (pointer: coarse) {
@@ -255,8 +258,8 @@
         <div class="cell"></div><div class="cell"></div><div class="cell"></div>
       </div>
       <div class="answers">
-        <button class="answer" id="positionButton" type="button">Position<small>Taste P</small></button>
-        <button class="answer" id="audioButton" type="button">Audio<small>Taste A</small></button>
+        <button class="answer" id="positionButton" type="button">Position</button>
+        <button class="answer" id="audioButton" type="button">Audio</button>
       </div>
     </section>
 
@@ -568,14 +571,14 @@
 
       const outcomeText = document.createElement("p");
       outcomeText.className = `outcome${outcome.passed ? "" : " fail"}`;
-      outcomeText.textContent = outcome.passed ? "Bestanden" : "Nicht bestanden";
+      outcomeText.textContent = outcome.passed ? "Stufe geschafft!" : "Gute Übung – weiter geht’s!";
       resultView.append(outcomeText);
 
       const next = document.createElement("p");
       next.className = "next-step";
       if (outcome.passed && round.level === 4) next.textContent = "Training auf der höchsten Stufe abgeschlossen. Du kannst weiter auf 4-Back trainieren.";
       else if (outcome.passed) next.textContent = `Nächste Stufe: ${nextLevel}-Back`;
-      else next.textContent = `Die Stufe bleibt bei ${round.level}-Back.`;
+      else next.textContent = `Nächster Schritt: noch eine Runde auf ${round.level}-Back.`;
       resultView.append(next);
 
       const actions = document.createElement("div");
@@ -610,9 +613,9 @@
       const section = document.createElement("section");
       section.className = "history";
       const heading = document.createElement("h2");
-      heading.textContent = "Trainingshistorie";
+      heading.textContent = "Deine letzten 5 Runden";
       const list = document.createElement("ol");
-      for (const entry of state.history.slice(-10).reverse()) {
+      for (const entry of state.history.slice(-5).reverse()) {
         const item = document.createElement("li");
         item.textContent = formatHistoryEntry(entry);
         list.append(item);
@@ -624,7 +627,7 @@
     function formatHistoryEntry(entry) {
       const date = new Date(entry.date);
       const dateText = Number.isNaN(date.getTime()) ? "" : `${date.toLocaleDateString("de-DE")} ${date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} – `;
-      return `${dateText}${entry.level}-Back – ${entry.passed ? "bestanden" : "nicht bestanden"} – ${entry.errors} ${entry.errors === 1 ? "Fehler" : "Fehler"}`;
+      return `${dateText}${entry.level}-Back – ${entry.passed ? "Stufe geschafft" : "Weiter trainieren"} – ${entry.errors} ${entry.errors === 1 ? "Fehler" : "Fehler"}`;
     }
 
     function renderHomeHistory() {
@@ -635,7 +638,7 @@
       }
       homeHistory.classList.remove("hidden");
       const heading = document.createElement("h2");
-      heading.textContent = "Trainingsverlauf";
+      heading.textContent = "Dein Trainingsverlauf";
       const bestLevel = Math.max(...state.history.map(entry => Math.max(Number(entry.highestLevel) || 1, Number(entry.level) || 1)));
       const summary = document.createElement("p");
       summary.className = "muted";
