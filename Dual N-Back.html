@@ -241,6 +241,7 @@
       </div>
       <button class="secondary theme-toggle" id="themeToggle" type="button" aria-pressed="false">Dunkelmodus einschalten</button>
       <button class="primary" id="startButton" type="button">Training starten</button>
+      <section class="history hidden" id="homeHistory" aria-label="Gespeicherter Trainingsverlauf"></section>
     </section>
 
     <section id="gameView" class="panel hidden" aria-label="Laufende Runde">
@@ -282,7 +283,7 @@
       scoredTrials: 24,
       maxErrorsForPromotion: 2,
       stimulusDuration: 500,
-      trialDuration: 3000,
+      trialDuration: 3200,
       letters: ["T", "M", "F", "S", "K", "W", "Z", "R", "Q"],
       spokenLetters: { T: "te", M: "em", F: "ef", S: "es", K: "ka", W: "we", Z: "zett", R: "er", Q: "ku" }
     });
@@ -294,18 +295,31 @@
       return [letter, audio];
     }));
 
+    const HISTORY_STORAGE_KEY = "dualNBackTrainingHistoryV1";
+
+    function loadTrainingHistory() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+        if (!Array.isArray(stored)) return [];
+        return stored.filter(entry => entry && Number.isFinite(Number(entry.level)) && Number.isFinite(Number(entry.errors)) && entry.date).slice(-100);
+      } catch (_) {
+        return [];
+      }
+    }
+
     const state = {
       level: null,
       started: false,
       running: false,
       roundToken: 0,
-      history: [],
+      history: loadTrainingHistory(),
       highestLevel: null
     };
 
     const startView = document.getElementById("startView");
     const gameView = document.getElementById("gameView");
     const resultView = document.getElementById("resultView");
+    const homeHistory = document.getElementById("homeHistory");
     const themeToggle = document.getElementById("themeToggle");
     const gridCells = Array.from(document.querySelectorAll(".cell"));
     const counter = document.getElementById("counter");
@@ -524,6 +538,13 @@
       state.highestLevel = highestLevel;
       const record = { level: round.level, ...outcome, nextLevel, highestLevel, date: new Date() };
       state.history.push(record);
+      state.history = state.history.slice(-100);
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(state.history));
+      } catch (_) {
+        // Ergebnisse bleiben für die aktuelle Sitzung sichtbar, falls Speicher blockiert ist.
+      }
+      renderHomeHistory();
       resultView.innerHTML = "";
 
       const title = document.createElement("h1");
@@ -591,13 +612,41 @@
       const heading = document.createElement("h2");
       heading.textContent = "Trainingshistorie";
       const list = document.createElement("ol");
-      for (const entry of state.history) {
+      for (const entry of state.history.slice(-10).reverse()) {
         const item = document.createElement("li");
-        item.textContent = `${entry.level}-Back – ${entry.passed ? "bestanden" : "nicht bestanden"} – ${entry.errors} ${entry.errors === 1 ? "Fehler" : "Fehler"}`;
+        item.textContent = formatHistoryEntry(entry);
         list.append(item);
       }
       section.append(heading, list);
       return section;
+    }
+
+    function formatHistoryEntry(entry) {
+      const date = new Date(entry.date);
+      const dateText = Number.isNaN(date.getTime()) ? "" : `${date.toLocaleDateString("de-DE")} ${date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} – `;
+      return `${dateText}${entry.level}-Back – ${entry.passed ? "bestanden" : "nicht bestanden"} – ${entry.errors} ${entry.errors === 1 ? "Fehler" : "Fehler"}`;
+    }
+
+    function renderHomeHistory() {
+      homeHistory.replaceChildren();
+      if (!state.history.length) {
+        homeHistory.classList.add("hidden");
+        return;
+      }
+      homeHistory.classList.remove("hidden");
+      const heading = document.createElement("h2");
+      heading.textContent = "Trainingsverlauf";
+      const bestLevel = Math.max(...state.history.map(entry => Math.max(Number(entry.highestLevel) || 1, Number(entry.level) || 1)));
+      const summary = document.createElement("p");
+      summary.className = "muted";
+      summary.textContent = `${state.history.length} ${state.history.length === 1 ? "Runde" : "Runden"} gespeichert · Höchste Stufe: ${bestLevel}-Back`;
+      const list = document.createElement("ol");
+      for (const entry of state.history.slice(-5).reverse()) {
+        const item = document.createElement("li");
+        item.textContent = formatHistoryEntry(entry);
+        list.append(item);
+      }
+      homeHistory.append(heading, summary, list);
     }
 
     async function unlockAudioForMobile() {
@@ -627,6 +676,7 @@
       await unlockAudioForMobile();
       playRound(state.level);
     });
+    renderHomeHistory();
     audioButton.addEventListener("pointerdown", event => handleAnswerPointer("audio", event));
     positionButton.addEventListener("pointerdown", event => handleAnswerPointer("position", event));
     // Keep keyboard and assistive-technology activation working. A pointer
