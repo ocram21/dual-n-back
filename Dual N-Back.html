@@ -527,6 +527,24 @@
       return section;
     }
 
+    async function unlockAudioForMobile() {
+      const audios = Object.values(letterAudio);
+      await Promise.all(audios.map(async audio => {
+        const oldVolume = audio.volume;
+        try {
+          audio.volume = 0;
+          audio.currentTime = 0;
+          await audio.play();
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_) {
+          // Ein gesperrter Clip soll den Start der Runde nicht verhindern.
+        } finally {
+          audio.volume = oldVolume;
+        }
+      }));
+    }
+
     document.getElementById("startButton").addEventListener("click", async () => {
       const selected = Number(document.querySelector('input[name="startLevel"]:checked').value);
       state.started = true;
