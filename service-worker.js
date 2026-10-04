@@ -1,4 +1,4 @@
-const CACHE_NAME = "dual-n-back-v5";
+const CACHE_NAME = "dual-n-back-v6";
 const APP_SHELL = [
   "./",
   "./index.html",

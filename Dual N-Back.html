@@ -85,7 +85,8 @@
     }
     .primary { width: 100%; padding: 13px 20px; background: var(--accent); color: #fff; }
     .primary:hover { background: var(--accent-dark); }
-    .primary:focus-visible, .answer:focus-visible, .secondary:focus-visible { outline: 3px solid #a8c9ba; outline-offset: 3px; }
+    .primary:focus-visible, .secondary:focus-visible { outline: 3px solid #a8c9ba; outline-offset: 3px; }
+    .answer:focus, .answer:focus-visible { outline: none; }
     button:disabled { cursor: default; opacity: .48; }
     .game-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: 22px; }
     .game-head h1 { margin: 0; font-size: 25px; }
@@ -98,10 +99,9 @@
     .cell.active { background: var(--stimulus); }
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .answer { padding: 12px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
-    .answer.pointer-activated:focus { outline: none; }
     .answer:enabled:hover { border-color: var(--accent); background: #f7faf8; }
     .answer small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
-    .answer.flash { border-color: var(--accent); background: #dcebe2; color: var(--accent-dark); }
+    .answer.flash { border-color: #98a29c; background: #e8ebe9; color: var(--ink); }
     .result-lead { margin-bottom: 24px; color: var(--muted); }
     .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
     .score-card { padding: 16px; border: 1px solid var(--line); border-radius: 9px; }
@@ -196,8 +196,10 @@
     }
 
     @media (hover: none) and (pointer: coarse) {
-      .primary:hover, .secondary:hover, .answer:enabled:hover { background: inherit; }
+      .primary:hover, .secondary:hover { background: inherit; }
       .primary:hover { background: var(--accent); }
+      .answer:enabled:hover { border-color: var(--line); background: #fff; }
+      .answer:enabled.flash { border-color: #98a29c; background: #e8ebe9; color: var(--ink); }
     }
   </style>
 </head>
@@ -284,6 +286,7 @@
     const audioButton = document.getElementById("audioButton");
     const positionButton = document.getElementById("positionButton");
     const pointerAnswersHandled = new WeakSet();
+    const answerFeedbackTimers = new WeakMap();
 
     function showView(view) {
       startView.classList.toggle("hidden", view !== startView);
@@ -360,21 +363,33 @@
     }
 
     function registerAnswer(kind) {
+      const button = kind === "audio" ? audioButton : positionButton;
+      const previousTimer = answerFeedbackTimers.get(button);
+      if (previousTimer) window.clearTimeout(previousTimer);
+      button.classList.remove("flash");
+      void button.offsetWidth;
+      button.classList.add("flash");
+      answerFeedbackTimers.set(button, window.setTimeout(() => {
+        button.classList.remove("flash");
+        answerFeedbackTimers.delete(button);
+      }, 220));
+
       if (!state.running) return;
       const round = state.currentRound;
       const trial = round && round.sequence[round.index];
       if (!trial || !trial.scored || trial.answers[kind]) return;
       trial.answers[kind] = true;
-      const button = kind === "audio" ? audioButton : positionButton;
-      button.classList.remove("flash");
-      void button.offsetWidth;
-      button.classList.add("flash");
-      window.setTimeout(() => button.classList.remove("flash"), 220);
     }
 
     function clearAnswerFeedback() {
       audioButton.classList.remove("flash");
       positionButton.classList.remove("flash");
+      const audioTimer = answerFeedbackTimers.get(audioButton);
+      const positionTimer = answerFeedbackTimers.get(positionButton);
+      if (audioTimer) window.clearTimeout(audioTimer);
+      if (positionTimer) window.clearTimeout(positionTimer);
+      answerFeedbackTimers.delete(audioButton);
+      answerFeedbackTimers.delete(positionButton);
       audioButton.classList.remove("pointer-activated");
       positionButton.classList.remove("pointer-activated");
       audioButton.blur();
