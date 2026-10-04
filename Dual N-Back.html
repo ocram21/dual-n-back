@@ -121,7 +121,7 @@
     .cell { border-radius: 9px; background: var(--cell); }
     .cell.active { background: var(--stimulus); }
     .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .answer { padding: 12px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
+    .answer { min-height: 104px; padding: 12px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); touch-action: none; -webkit-tap-highlight-color: transparent; }
     .answer:enabled:hover { border-color: var(--accent); background: var(--hover-surface); }
     .answer.flash { border-color: var(--feedback-line); background: var(--feedback-bg); color: var(--ink); }
     .result-lead { margin-bottom: 24px; color: var(--muted); }
@@ -203,7 +203,7 @@
         margin-top: auto;
       }
       .answer {
-        min-height: clamp(68px, 10dvh, 88px);
+        min-height: clamp(136px, 20dvh, 176px);
         padding: 12px 8px;
         font-size: clamp(15px, 4vw, 18px);
         line-height: 1.15;
@@ -236,7 +236,7 @@
 
     <section id="startView" class="panel" aria-labelledby="startTitle">
       <h1 id="startTitle">Dual N-Back Training</h1>
-      <p class="intro">Merke dir die Position im Raster und den gesprochenen Buchstaben. Drücke Audio (A) oder Position (P), wenn der jeweilige Reiz dem vor N Schritten entspricht. Passen beide, kannst du beide Antworten geben.</p>
+      <p class="intro">Merke dir die Position im Raster und den gesprochenen Buchstaben. Drücke Audio oder Position, wenn der jeweilige Reiz dem vor N Schritten entspricht. Passen beide, kannst du beide Antworten geben.</p>
       <span class="field-label" id="levelLabel">Anfangsstufe</span>
       <div class="level-choice" role="radiogroup" aria-labelledby="levelLabel">
         <label><input type="radio" name="startLevel" value="1" checked><span>1-Back</span></label>
