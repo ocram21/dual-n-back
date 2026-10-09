@@ -284,7 +284,7 @@
 
     const CONFIG = Object.freeze({
       scoredTrials: 24,
-      maxErrorsForPromotion: 2,
+      maxErrorsForPromotion: 0,
       stimulusDuration: 500,
       trialDuration: 4000,
       letters: ["T", "M", "F", "S", "K", "W", "Z", "R", "Q"],
@@ -571,25 +571,39 @@
 
       const outcomeText = document.createElement("p");
       outcomeText.className = `outcome${outcome.passed ? "" : " fail"}`;
-      outcomeText.textContent = outcome.passed ? "Stufe geschafft!" : "Gute Übung – weiter geht’s!";
+      if (outcome.errors === 0) outcomeText.textContent = "Stufe geschafft!";
+      else if (outcome.errors <= 2) outcomeText.textContent = "Gute Runde – diese Stufe wiederholen!";
+      else outcomeText.textContent = "Durchlauf beendet – beim nächsten Mal geht’s weiter.";
       resultView.append(outcomeText);
 
       const next = document.createElement("p");
       next.className = "next-step";
-      if (outcome.passed && round.level === 4) next.textContent = "Training auf der höchsten Stufe abgeschlossen. Du kannst weiter auf 4-Back trainieren.";
-      else if (outcome.passed) next.textContent = `Nächste Stufe: ${nextLevel}-Back`;
-      else next.textContent = `Nächster Schritt: noch eine Runde auf ${round.level}-Back.`;
+      if (outcome.errors === 0 && round.level === 4) next.textContent = "Du bist auf der höchsten Stufe. Du kannst 4-Back wiederholen.";
+      else if (outcome.errors === 0) next.textContent = "Wiederhole die Stufe oder erhöhe den Schwierigkeitsgrad.";
+      else if (outcome.errors <= 2) next.textContent = `Wiederhole ${round.level}-Back, um weiter zu trainieren.`;
+      else next.textContent = "Dieser Durchlauf ist abgeschlossen.";
       resultView.append(next);
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
-      const again = document.createElement("button");
-      again.className = "primary";
-      again.type = "button";
-      again.textContent = "Neue Runde";
-      again.addEventListener("click", () => playRound(state.level));
-      actions.append(again);
-      resultView.append(actions);
+      if (outcome.errors <= 2) {
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const repeat = document.createElement("button");
+        repeat.className = outcome.errors === 0 && round.level < 4 ? "secondary" : "primary";
+        repeat.type = "button";
+        repeat.textContent = "Stufe wiederholen";
+        repeat.addEventListener("click", () => playRound(round.level));
+        actions.append(repeat);
+
+        if (outcome.errors === 0 && round.level < 4) {
+          const increase = document.createElement("button");
+          increase.className = "primary";
+          increase.type = "button";
+          increase.textContent = "Schwierigkeitsgrad erhöhen";
+          increase.addEventListener("click", () => playRound(round.level + 1));
+          actions.append(increase);
+        }
+        resultView.append(actions);
+      }
       if (state.history.length) resultView.append(makeHistory());
       showView(resultView);
     }
